@@ -1,5 +1,7 @@
 # AE_AnsysBBoxViewer
 
+![AE Ansys BBox Viewer](screenshots/sample.jpg)
+
 AE_AnsysBBoxViewer is an After Effects tool for visualizing bounding-box data
 generated from Python-based video analysis workflows.
 
