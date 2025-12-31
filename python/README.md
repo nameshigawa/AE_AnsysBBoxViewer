@@ -26,9 +26,11 @@ with any custom analysis pipeline that outputs the same JSON structure.
 - Other dependencies depending on the analysis method used
 
 ## Usage
+
 ```bash
 pip install opencv-python
 python analyze_video.py
+```
 
 ## Google Colab
 
