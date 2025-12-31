@@ -1,10 +1,16 @@
 # AE_AnsysBBoxViewer
 
+**Current Version:** v1.0.1 (JSON-driven)
+
 ![AE Ansys BBox Viewer](screenshots/sample.jpg)
 
 AE_AnsysBBoxViewer is an After Effects script that visualizes Python-based video analysis results using bounding boxes imported from JSON files.
 
 It is designed for workflows where object detection or tracking is performed in Python, and the results are reviewed and refined visually inside After Effects.
+
+## Legacy Version
+
+`ae/legacy/AE_AnsysBBoxViewer_v1.0.0.jsx` is provided as a minimal, non-JSON example for reference and learning purposes.
 
 ---
 

@@ -2,145 +2,133 @@
 @name        Ansys BBox Viewer
 @description Visualize Python analysis bounding boxes in After Effects
 @author      nameshigawa
-@version     1.0.0
+@version     1.0.1
 */
 
-(function () {
-    app.beginUndoGroup("Ansys BBox Viewer");
+app.beginUndoGroup("AE_AnsysBBoxViewer");
 
+function ensureComp() {
     var comp = app.project.activeItem;
-    if (!(comp instanceof CompItem)) {
-        alert("Please select a composition");
-        return;
-    }
-
-    /* =========================
-       ① 選択レイヤーを保存
-    ========================= */
-    var targets = comp.selectedLayers.slice();
-
-    if (targets.length === 0) {
-        alert("Please select a shape layer");
-        return;
-    }
-
-    /* =========================
-       ② Controller レイヤー取得 or 作成
-    ========================= */
-    var ctrl = null;
-    for (var i = 1; i <= comp.numLayers; i++) {
-        if (comp.layer(i).name === "Controller") {
-            ctrl = comp.layer(i);
-            break;
-        }
-    }
-
-    if (!ctrl) {
-        ctrl = comp.layers.addNull();
-        ctrl.name = "Controller";
-        ctrl.label = 9;
-    }
-
-    /* =========================
-       ③ Controller エフェクト作成
-    ========================= */
-    function ensureEffect(layer, matchName, name, initValue) {
-        var fx = layer.property("Effects");
-        var e = null;
-
-        for (var i = 1; i <= fx.numProperties; i++) {
-            if (fx.property(i).matchName === matchName) {
-                e = fx.property(i);
-                break;
-            }
-        }
-
-        if (!e) {
-            e = fx.addProperty(matchName);
-            e.name = name;
-        }
-
-        if (initValue !== undefined) {
-            try { e.property(1).setValue(initValue); } catch (_) {}
-        }
-        return e;
-    }
-
-    ensureEffect(ctrl, "ADBE Layer Control", "JSON_Name");
-    ensureEffect(ctrl, "ADBE Checkbox Control", "Visible", 1);
-    ensureEffect(ctrl, "ADBE Slider Control", "Stroke_Width", 2);
-    ensureEffect(ctrl, "ADBE Color Control", "Stroke_Color", [0, 1, 0]);
-
-    /* =========================
-       ④ 選択レイヤーに適用
-    ========================= */
-    function findByMatchName(group, matchName) {
-        for (var i = 1; i <= group.numProperties; i++) {
-            if (group.property(i).matchName === matchName) {
-                return group.property(i);
-            }
-        }
+    if (!(comp && comp instanceof CompItem)) {
+        alert("Please select a composition.");
         return null;
     }
+    return comp;
+}
 
-    for (var i = 0; i < targets.length; i++) {
-        var layer = targets[i];
-        if (!(layer instanceof ShapeLayer)) continue;
+// -------------------------
+// Controller
+// -------------------------
+function ensureController(comp) {
+    var ctrl = comp.layer("Controller");
+    if (ctrl) return ctrl;
 
-        var contents = layer.property("Contents");
-        if (!contents || contents.numProperties === 0) continue;
+    ctrl = comp.layers.addNull();
+    ctrl.name = "Controller";
 
-        var group = contents.property(1);
-        var groupContents = group.property("Contents");
+    var fx = ctrl.property("ADBE Effect Parade");
 
-        // Rectangle Size
-        var rect = findByMatchName(groupContents, "ADBE Vector Shape - Rect");
-        if (rect && rect.property("Size").canSetExpression) {
-            rect.property("Size").expression =
-'var jsonName = thisComp.layer("Controller").effect("JSON_Name")("ADBE Layer Control-0001").name;\n' +
-'var data = footage(jsonName).sourceData;\n' +
-'var frames = data.frames ? data.frames : data;\n' +
-'var f = Math.min(timeToFrames(time), frames.length - 1);\n' +
-'var m = thisLayer.name.match(/\\d+/);\n' +
-'var id = m ? parseInt(m[0], 10) : 0;\n' +
-'frames[f] && frames[f][id]\n' +
-' ? [frames[f][id].width, frames[f][id].height]\n' +
-' : [0,0];';
-        }
+    // JSON Name
+    var jsonFx = fx.addProperty("ADBE Layer Control");
+    jsonFx.name = "JSON_Name";
 
-        // Stroke
-        var stroke = findByMatchName(groupContents, "ADBE Vector Graphic - Stroke");
-        if (stroke) {
-            stroke.property("Stroke Width").expression =
-'thisComp.layer("Controller").effect("Stroke_Width")("ADBE Slider Control-0001");';
+    // Stroke Width
+    var sw = fx.addProperty("ADBE Slider Control");
+    sw.name = "Stroke_Width";
+    sw.property("ADBE Slider Control-0001").setValue(2);
 
-            stroke.property("Color").expression =
-'thisComp.layer("Controller").effect("Stroke_Color")("ADBE Color Control-0001");';
-        }
+    // Color
+    var col = fx.addProperty("ADBE Color Control");
+    col.name = "Stroke_Color";
+    col.property("ADBE Color Control-0001").setValue([0, 1, 0]);
 
-        // Position
-        layer.property("Transform").property("Position").expression =
-'var jsonName = thisComp.layer("Controller").effect("JSON_Name")("ADBE Layer Control-0001").name;\n' +
-'var data = footage(jsonName).sourceData;\n' +
-'var frames = data.frames ? data.frames : data;\n' +
-'var f = Math.min(timeToFrames(time), frames.length - 1);\n' +
-'var m = thisLayer.name.match(/\\d+/);\n' +
-'var id = m ? parseInt(m[0], 10) : 0;\n' +
-'frames[f] && frames[f][id]\n' +
-' ? [frames[f][id].x + frames[f][id].width / 2,\n' +
-'    frames[f][id].y + frames[f][id].height / 2]\n' +
-' : value;';
+    return ctrl;
+}
 
-        // Opacity（id が無ければ 0）
-        layer.property("Transform").property("Opacity").expression =
-'var jsonName = thisComp.layer("Controller").effect("JSON_Name")("ADBE Layer Control-0001").name;\n' +
-'var data = footage(jsonName).sourceData;\n' +
-'var frames = data.frames ? data.frames : data;\n' +
-'var f = Math.min(timeToFrames(time), frames.length - 1);\n' +
-'var m = thisLayer.name.match(/\\d+/);\n' +
-'var id = m ? parseInt(m[0], 10) : 0;\n' +
-'(thisComp.layer("Controller").effect("Visible")("ADBE Checkbox Control-0001")==1 && frames[f] && frames[f][id]) ? 100 : 0;';
-    }
+// -------------------------
+// BBox Shape
+// -------------------------
+function createBBox(comp, ctrl, name) {
 
-    app.endUndoGroup();
-})();
+    var layer = comp.layers.addShape();
+    layer.name = name;
+
+    var contents = layer.property("ADBE Root Vectors Group");
+    var group = contents.addProperty("ADBE Vector Group");
+    group.name = "BBox";
+
+    var vectors = group.property("ADBE Vectors Group");
+
+    // Rectangle
+    var rect = vectors.addProperty("ADBE Vector Shape - Rect");
+    rect.property("ADBE Vector Rect Position").setValue([0, 0]);
+
+    // --- Size ---
+    rect.property("ADBE Vector Rect Size").expression =
+        'var c = thisComp.layer("Controller");\n' +
+        'var f = c.effect("JSON_Name")("ADBE Layer Control-0001").name;\n' +
+        'var d = footage(f).sourceData;\n' +
+        'var frames = d.frames ? d.frames : d;\n' +
+        'var fi = Math.min(timeToFrames(time), frames.length-1);\n' +
+        'var m = thisLayer.name.match(/\\d+/);\n' +
+        'var id = m ? parseInt(m[0],10) : 0;\n' +
+        'if (frames[fi] && frames[fi].length > id) {\n' +
+        '  var b = frames[fi][id];\n' +
+        '  [b.width, b.height];\n' +
+        '} else [0,0];\n';
+
+    // Fill OFF
+    var fill = vectors.addProperty("ADBE Vector Graphic - Fill");
+    fill.property("ADBE Vector Fill Opacity").setValue(0);
+
+    // Stroke
+    var stroke = vectors.addProperty("ADBE Vector Graphic - Stroke");
+
+    stroke.property("ADBE Vector Stroke Width").expression =
+        'thisComp.layer("Controller")\n' +
+        '.effect("Stroke_Width")("ADBE Slider Control-0001");';
+
+    stroke.property("ADBE Vector Stroke Color").expression =
+        'thisComp.layer("Controller")\n' +
+        '.effect("Stroke_Color")("ADBE Color Control-0001");';
+
+    // --- Position ---
+    layer.property("ADBE Transform Group")
+        .property("ADBE Position").expression =
+        'var c = thisComp.layer("Controller");\n' +
+        'var f = c.effect("JSON_Name")("ADBE Layer Control-0001").name;\n' +
+        'var d = footage(f).sourceData;\n' +
+        'var frames = d.frames ? d.frames : d;\n' +
+        'var fi = Math.min(timeToFrames(time), frames.length-1);\n' +
+        'var m = thisLayer.name.match(/\\d+/);\n' +
+        'var id = m ? parseInt(m[0],10) : 0;\n' +
+        'if (frames[fi] && frames[fi].length > id) {\n' +
+        '  var b = frames[fi][id];\n' +
+        '  [b.x + b.width/2, b.y + b.height/2];\n' +
+        '} else value;\n';
+
+    // --- Opacity ---
+    layer.property("ADBE Transform Group")
+        .property("ADBE Opacity").expression =
+        'var c = thisComp.layer("Controller");\n' +
+        'var f = c.effect("JSON_Name")("ADBE Layer Control-0001").name;\n' +
+        'var d = footage(f).sourceData;\n' +
+        'var frames = d.frames ? d.frames : d;\n' +
+        'var fi = Math.min(timeToFrames(time), frames.length-1);\n' +
+        'var m = thisLayer.name.match(/\\d+/);\n' +
+        'var id = m ? parseInt(m[0],10) : 0;\n' +
+        '(frames[fi] && frames[fi].length > id) ? 100 : 0;\n';
+
+    return layer;
+}
+
+// -------------------------
+// Main
+// -------------------------
+var comp = ensureComp();
+if (comp) {
+    var ctrl = ensureController(comp);
+    createBBox(comp, ctrl, "BBox_0");
+}
+
+app.endUndoGroup();
