@@ -2,6 +2,7 @@
 
 This directory contains a reference Python script for analyzing video files
 and exporting bounding-box data in JSON format compatible with
+
 **AE_AnsysBBoxViewer**.
 
 The script is intended as an example implementation and can be replaced
@@ -28,3 +29,9 @@ with any custom analysis pipeline that outputs the same JSON structure.
 ```bash
 pip install opencv-python
 python analyze_video.py
+
+## Google Colab
+
+You can run the Python video analysis script directly in Google Colab:
+
+[Open in Google Colab](https://colab.research.google.com/github/nameshigawa/AE_AnsysBBoxViewer/blob/main/python/ansys_video_colab.ipynb)
