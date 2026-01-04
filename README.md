@@ -97,6 +97,18 @@ The script expects the following JSON structure:
 - `label`  : Class label (e.g. "person")
 - `conf`   : Detection confidence (0.0 – 1.0)
 
+## Sample Data
+
+Sample files are provided in the `samples/` directory.
+
+- `sample.mp4`  
+  A short sample video used for object detection.
+
+- `sample_bbox.json`  
+  Bounding box data generated from the sample video.
+
+You can use these files to quickly test AE_AnsysBBoxViewer without running the Python analysis.
+
 ## Roadmap
 
 - v1.1.0: Advanced bounding-box control
