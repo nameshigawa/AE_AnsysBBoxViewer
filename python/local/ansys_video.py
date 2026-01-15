@@ -24,39 +24,70 @@ from ultralytics import YOLO
 # Configuration
 # ------------------------------------------------------------
 
+DEFAULT_CONFIG = {
+    'tracker_type': 'bytetrack',
+    'track_high_thresh': 0.6,
+    'track_low_thresh': 0.1,
+    'new_track_thresh': 0.7,
+    'track_buffer': 60,
+    'match_thresh': 0.85,
+    'fuse_score': True,
+    'motion': {'max_iou_distance': 0.7}
+}
+
+
 def load_config(config_path):
     """Load configuration from YAML file"""
-    if not os.path.exists(config_path):
-        raise FileNotFoundError(f"Config file not found: {config_path}")
-    
-    with open(config_path, 'r') as f:
-        config = yaml.safe_load(f)
-    
-    return config
+    try:
+        if not os.path.exists(config_path):
+            print(f"Config file not found at: {config_path}")
+            return None
+        
+        with open(config_path, 'r') as f:
+            config = yaml.safe_load(f)
+        
+        if config is None:
+            print(f"Invalid YAML file (empty or malformed): {config_path}")
+            return None
+        
+        return config
+    except Exception as e:
+        print(f"Error loading config: {e}")
+        return None
 
 
 # Default configuration path (relative to this script)
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = os.path.join(SCRIPT_DIR, '..', 'custom_bytetrack.yaml')
 
-# Load config with fallback defaults
-try:
-    CONFIG = load_config(CONFIG_PATH)
-except FileNotFoundError:
-    print(f"Warning: Config file not found at {CONFIG_PATH}")
-    CONFIG = {
-        'tracker_type': 'bytetrack',
-        'track_high_thresh': 0.6,
-        'track_low_thresh': 0.1,
-        'new_track_thresh': 0.7,
-        'track_buffer': 60,
-        'match_thresh': 0.85,
-        'fuse_score': True,
-        'motion': {'max_iou_distance': 0.7}
-    }
+# Load configuration with fallback to defaults
+print(f"Loading configuration from: {CONFIG_PATH}")
+CONFIG = load_config(CONFIG_PATH)
+if CONFIG is None:
+    print("Using default configuration")
+    CONFIG = DEFAULT_CONFIG
+else:
+    print("✓ Configuration loaded successfully")
 
-MODEL_NAME = "yolov11m.pt"
+MODEL_NAME = "yolo11m"  # Changed from .pt to auto-download
 SHOW_PREVIEW = True   # Set False to disable OpenCV preview window
+
+
+# ------------------------------------------------------------
+# Model Download
+# ------------------------------------------------------------
+
+def ensure_model_available():
+    """Ensure YOLO model is downloaded"""
+    try:
+        print(f"Loading YOLO model: {MODEL_NAME}")
+        model = YOLO(MODEL_NAME)
+        print("✓ Model loaded successfully")
+        return model
+    except Exception as e:
+        print(f"Error loading model: {e}")
+        print("Attempting to download model...")
+        return YOLO(MODEL_NAME)
 
 
 # ------------------------------------------------------------
@@ -77,7 +108,7 @@ def select_video():
 # ------------------------------------------------------------
 
 def analyze_video(video_path):
-    model = YOLO(MODEL_NAME)
+    model = ensure_model_available()
     
     # Initialize tracker with configuration
     tracker_config = {
