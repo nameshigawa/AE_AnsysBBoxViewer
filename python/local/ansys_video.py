@@ -14,6 +14,7 @@ This script is provided as a reference implementation.
 import os
 import json
 import cv2
+import yaml
 import tkinter as tk
 from tkinter import filedialog
 from ultralytics import YOLO
@@ -23,7 +24,38 @@ from ultralytics import YOLO
 # Configuration
 # ------------------------------------------------------------
 
-MODEL_NAME = "yolov8n.pt"
+def load_config(config_path):
+    """Load configuration from YAML file"""
+    if not os.path.exists(config_path):
+        raise FileNotFoundError(f"Config file not found: {config_path}")
+    
+    with open(config_path, 'r') as f:
+        config = yaml.safe_load(f)
+    
+    return config
+
+
+# Default configuration path (relative to this script)
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+CONFIG_PATH = os.path.join(SCRIPT_DIR, '..', 'custom_bytetrack.yaml')
+
+# Load config with fallback defaults
+try:
+    CONFIG = load_config(CONFIG_PATH)
+except FileNotFoundError:
+    print(f"Warning: Config file not found at {CONFIG_PATH}")
+    CONFIG = {
+        'tracker_type': 'bytetrack',
+        'track_high_thresh': 0.6,
+        'track_low_thresh': 0.1,
+        'new_track_thresh': 0.7,
+        'track_buffer': 60,
+        'match_thresh': 0.85,
+        'fuse_score': True,
+        'motion': {'max_iou_distance': 0.7}
+    }
+
+MODEL_NAME = "yolov11m.pt"
 SHOW_PREVIEW = True   # Set False to disable OpenCV preview window
 
 
@@ -46,6 +78,18 @@ def select_video():
 
 def analyze_video(video_path):
     model = YOLO(MODEL_NAME)
+    
+    # Initialize tracker with configuration
+    tracker_config = {
+        'tracker_type': CONFIG.get('tracker_type', 'bytetrack'),
+        'track_high_thresh': CONFIG.get('track_high_thresh', 0.6),
+        'track_low_thresh': CONFIG.get('track_low_thresh', 0.1),
+        'new_track_thresh': CONFIG.get('new_track_thresh', 0.7),
+        'track_buffer': CONFIG.get('track_buffer', 60),
+        'match_thresh': CONFIG.get('match_thresh', 0.85),
+        'fuse_score': CONFIG.get('fuse_score', True),
+    }
+    
     cap = cv2.VideoCapture(video_path)
 
     if not cap.isOpened():
@@ -127,7 +171,19 @@ def main():
         print("No MP4 file selected.")
         return
 
-    print("Analyzing:", video_path)
+    print("=" * 60)
+    print("CONFIGURATION LOADED:")
+    print("=" * 60)
+    for key, value in CONFIG.items():
+        if isinstance(value, dict):
+            print(f"{key}:")
+            for k, v in value.items():
+                print(f"  {k}: {v}")
+        else:
+            print(f"{key}: {value}")
+    print("=" * 60)
+    
+    print("\nAnalyzing:", video_path)
     data = analyze_video(video_path)
     json_path = export_json(video_path, data)
 

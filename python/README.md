@@ -8,8 +8,6 @@ and exporting bounding-box data in JSON format compatible with
 The script is intended as an example implementation and can be replaced
 with any custom analysis pipeline that outputs the same JSON structure.
 
-**Current Version:** v1.0.1 (JSON-driven)
-
 ---
 
 ## Features
@@ -39,7 +37,3 @@ python analyze_video.py
 You can run the Python video analysis script directly in Google Colab:
 
 [Open in Google Colab](https://colab.research.google.com/github/nameshigawa/AE_AnsysBBoxViewer/blob/main/python/ansys_video_colab.ipynb)
-
-## Legacy Version
-
-`ae/legacy/AE_AnsysBBoxViewer_v1.0.0.jsx` is provided as a minimal, non-JSON example for reference and learning purposes.
