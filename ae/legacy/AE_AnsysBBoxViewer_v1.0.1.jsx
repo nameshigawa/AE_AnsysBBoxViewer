@@ -2,63 +2,23 @@
 @name        Ansys BBox Viewer
 @description Visualize Python analysis bounding boxes in After Effects
 @author      nameshigawa
-@version     1.1.0
+@version     1.0.1
 */
 
 app.beginUndoGroup("AE_AnsysBBoxViewer");
 
 function ensureComp() {
-    var jsonFile = File.openDialog("Select tracking JSON", "*.json");
-    if (!jsonFile) { alert("No JSON selected"); return null; }
-
-    var videoFile = File.openDialog("Select source MP4", "*.mp4");
-    if (!videoFile) { alert("No video selected"); return null; }
-
-    var jsonFootage = app.project.importFile(new ImportOptions(jsonFile));
-    var videoFootage = app.project.importFile(new ImportOptions(videoFile));
-
-    // json data reading
-    var data = jsonFootage.sourceData;
-
-    // Create comp
-    var comp = app.project.items.addComp(
-        "AE_AnsysBBoxViewer",
-        videoFootage.width,
-        videoFootage.height,
-        1,
-        videoFootage.duration,
-        videoFootage.frameRate
-    );
-
-    comp.layers.add(videoFootage);
-    comp.layers.add(jsonFootage);
-
-    return {comp: comp, data: data};
-}
-
-function getMaxID(data){
-    var maxId = 0;
-    
-    // データ構造をチェック
-    if (!data) return maxId;
-    
-    // framesキーがある場合
-    var frames = data.frames || data;
-    if (!Array.isArray(frames)) return maxId;
-    
-    for (var f=0; f<frames.length; f++){
-        if (Array.isArray(frames[f])) {
-            for (var i=0; i<frames[f].length; i++){
-                if (frames[f][i] && frames[f][i].id && frames[f][i].id > maxId){
-                    maxId = frames[f][i].id;
-                }
-            }
-        }
+    var comp = app.project.activeItem;
+    if (!(comp && comp instanceof CompItem)) {
+        alert("Please select a composition.");
+        return null;
     }
-    return maxId;
+    return comp;
 }
 
+// -------------------------
 // Controller
+// -------------------------
 function ensureController(comp) {
     var ctrl = comp.layer("Controller");
     if (ctrl) return ctrl;
@@ -85,11 +45,13 @@ function ensureController(comp) {
     return ctrl;
 }
 
+// -------------------------
 // BBox Shape
-function createBBox(comp, ctrl, maxID) {
-    for (var i=0; i<=maxID; i++){
+// -------------------------
+function createBBox(comp, ctrl, name) {
+
     var layer = comp.layers.addShape();
-    layer.name = "Box " + i;
+    layer.name = name;
 
     var contents = layer.property("ADBE Root Vectors Group");
     var group = contents.addProperty("ADBE Vector Group");
@@ -159,18 +121,14 @@ function createBBox(comp, ctrl, maxID) {
 
     return layer;
 }
-}
 
 // -------------------------
 // Main
 // -------------------------
-var result = ensureComp();
-if (result && result.comp) {
-    var comp = result.comp;
-    var data = result.data;
-    var maxID = getMaxID(data);
+var comp = ensureComp();
+if (comp) {
     var ctrl = ensureController(comp);
-    createBBox(comp, ctrl, maxID);
+    createBBox(comp, ctrl, "BBox_0");
 }
 
 app.endUndoGroup();
